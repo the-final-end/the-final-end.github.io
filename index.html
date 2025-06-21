@@ -2,22 +2,618 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Hola</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Simulación de Nivel de Agua con Giroscopio</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none;
+            user-select: none;
+        }
+        
         body {
-            background-color: black;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: white;
+            height: 100vh;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-size: 5rem;
-            font-family: Arial, sans-serif;
+            perspective: 1000px;
+        }
+        
+        .container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+        
+        .glass-container {
+            position: relative;
+            width: 250px;
+            height: 400px;
+            filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.5));
+        }
+        
+        .glass {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 10px 10px 50px 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 8px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(2px);
+            overflow: hidden;
+        }
+        
+        .water {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 70%;
+            background: linear-gradient(to top, #1e90ff, #00bfff);
+            border-radius: 50% 50% 0 0;
+            transition: transform 0.1s ease-out;
+            z-index: 2;
+        }
+        
+        .water-surface {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background: rgba(30, 144, 255, 0.7);
+            border-radius: 50%;
+            filter: blur(1px);
+        }
+        
+        .wave {
+            position: absolute;
+            width: 100%;
+            height: 30px;
+            background: rgba(173, 216, 230, 0.3);
+            border-radius: 50%;
+            animation: wave-animation 3s infinite linear;
+        }
+        
+        .wave-1 {
+            top: 15%;
+            animation-duration: 4s;
+        }
+        
+        .wave-2 {
+            top: 30%;
+            animation-duration: 5s;
+            animation-direction: reverse;
+        }
+        
+        .wave-3 {
+            top: 45%;
+            animation-duration: 6s;
+        }
+        
+        .bubbles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 3;
+        }
+        
+        .bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            animation: bubble-rise linear infinite;
+            filter: blur(1px);
+        }
+        
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 15px 30px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            max-width: 90%;
+            margin: 0 auto;
+            animation: float 4s infinite ease-in-out;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #36d1dc, #5b86e5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .instructions {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            max-width: 90%;
+            margin: 0 auto;
+            pointer-events: auto;
+        }
+        
+        .instruction-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 1rem;
+        }
+        
+        .icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #36d1dc, #5b86e5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border-radius: 30px;
+            background: linear-gradient(45deg, #36d1dc, #5b86e5);
+            color: white;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .permission-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 30, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+            z-index: 20;
+        }
+        
+        .permission-content {
+            max-width: 500px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .permission-title {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: #5b86e5;
+        }
+        
+        .permission-text {
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .permission-btn {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            max-width: 90%;
+            margin: 20px auto 0;
+        }
+        
+        .stat {
+            text-align: center;
+            padding: 0 15px;
+        }
+        
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #36d1dc;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .mobile-warning {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 30, 0.95);
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            z-index: 20;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        @keyframes wave-animation {
+            0% { transform: translateX(0) scaleY(1); }
+            50% { transform: translateX(20px) scaleY(0.95); }
+            100% { transform: translateX(0) scaleY(1); }
+        }
+        
+        @keyframes bubble-rise {
+            0% { 
+                transform: translateY(0) translateX(0);
+                opacity: 0.5;
+            }
+            100% { 
+                transform: translateY(-100vh) translateX(20px);
+                opacity: 0;
+            }
+        }
+        
+        @media (max-width: 500px) {
+            .glass-container {
+                width: 200px;
+                height: 320px;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .permission-title {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
-    que ocioso
+    <!-- Mensaje para dispositivos no móviles -->
+    <div class="mobile-warning" id="mobile-warning">
+        <div>
+            <h2>Dispositivo no compatible</h2>
+            <p>Por favor, abre esta página en un smartphone para experimentar la simulación con giroscopio.</p>
+        </div>
+    </div>
+    
+    <!-- Panel de permisos -->
+    <div class="permission-panel" id="permission-panel">
+        <div class="permission-content">
+            <h2 class="permission-title">Simulación de Nivel de Agua</h2>
+            <p class="permission-text">Esta experiencia utiliza el giroscopio de tu dispositivo para simular el nivel de agua en un vaso virtual. Por favor, permite el acceso a la orientación del dispositivo para continuar.</p>
+            <button class="btn permission-btn" id="permission-btn">Activar Giroscopio</button>
+        </div>
+    </div>
+    
+    <!-- Contenedor principal -->
+    <div class="container">
+        <div class="glass-container">
+            <div class="glass">
+                <div class="water" id="water">
+                    <div class="water-surface"></div>
+                    <div class="wave wave-1"></div>
+                    <div class="wave wave-2"></div>
+                    <div class="wave wave-3"></div>
+                    <div class="bubbles" id="bubbles"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Overlay de UI -->
+    <div class="ui-overlay">
+        <div class="header">
+            <h1>Simulación de Nivel de Agua</h1>
+            <p>Inclina tu dispositivo para mover el agua</p>
+        </div>
+        
+        <div class="instructions">
+            <div class="instruction-item">
+                <div class="icon">↻</div>
+                <div>Gira tu dispositivo para cambiar la dirección del agua</div>
+            </div>
+            <div class="instruction-item">
+                <div class="icon">⇅</div>
+                <div>Inclina hacia adelante/atrás para controlar el nivel</div>
+            </div>
+            <div class="instruction-item">
+                <div class="icon">🔄</div>
+                <div>Agita suavemente para crear ondas</div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" id="reset-btn">Reiniciar</button>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="tilt-x">0°</div>
+                <div class="stat-label">Inclinación X</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="tilt-y">0°</div>
+                <div class="stat-label">Inclinación Y</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="tilt-z">0°</div>
+                <div class="stat-label">Rotación Z</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Verificar si es un dispositivo móvil
+        function isMobileDevice() {
+            return (typeof window.orientation !== "undefined") || 
+                   (navigator.userAgent.indexOf('IEMobile') !== -1);
+        }
+        
+        if (!isMobileDevice()) {
+            document.getElementById('mobile-warning').style.display = 'flex';
+            document.getElementById('permission-panel').style.display = 'none';
+        }
+        
+        // Variables globales
+        let waterElement = document.getElementById('water');
+        let bubblesElement = document.getElementById('bubbles');
+        let tiltX = 0;
+        let tiltY = 0;
+        let tiltZ = 0;
+        let lastUpdate = 0;
+        let waveOffset = 0;
+        let bubbles = [];
+        let shakeIntensity = 0;
+        
+        // Solicitar acceso al giroscopio
+        function requestDeviceOrientation() {
+            if (typeof DeviceOrientationEvent !== 'undefined' && 
+                typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            initDeviceOrientation();
+                            document.getElementById('permission-panel').style.display = 'none';
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Navegadores que no requieren permiso
+                initDeviceOrientation();
+                document.getElementById('permission-panel').style.display = 'none';
+            }
+        }
+        
+        // Inicializar seguimiento de orientación
+        function initDeviceOrientation() {
+            window.addEventListener('deviceorientation', handleOrientation);
+            window.addEventListener('devicemotion', handleMotion);
+            
+            // Crear burbujas iniciales
+            createBubbles(15);
+            
+            // Iniciar animación
+            requestAnimationFrame(updateWater);
+        }
+        
+        // Manejar datos de orientación
+        function handleOrientation(event) {
+            const now = Date.now();
+            if (now - lastUpdate < 50) return; // Limitar a 20fps
+            
+            lastUpdate = now;
+            
+            // Obtener valores de inclinación
+            tiltX = event.beta || 0;  // Inclinación front-back (entre -180 y 180)
+            tiltY = event.gamma || 0; // Inclinación left-right (entre -90 y 90)
+            tiltZ = event.alpha || 0; // Rotación alrededor del eje Z
+            
+            // Actualizar UI
+            document.getElementById('tilt-x').textContent = Math.round(tiltX) + '°';
+            document.getElementById('tilt-y').textContent = Math.round(tiltY) + '°';
+            document.getElementById('tilt-z').textContent = Math.round(tiltZ) + '°';
+        }
+        
+        // Manejar datos de movimiento (para detección de agitación)
+        function handleMotion(event) {
+            const acceleration = event.accelerationIncludingGravity;
+            const intensity = Math.sqrt(
+                acceleration.x * acceleration.x + 
+                acceleration.y * acceleration.y + 
+                acceleration.z * acceleration.z
+            );
+            
+            // Detectar agitación
+            if (intensity > 20) {
+                shakeIntensity = Math.min(1.0, shakeIntensity + 0.2);
+                createBubbles(3);
+            } else {
+                shakeIntensity = Math.max(0, shakeIntensity - 0.01);
+            }
+        }
+        
+        // Actualizar simulación de agua
+        function updateWater() {
+            const now = Date.now();
+            
+            // Calcular transformaciones basadas en inclinación
+            const maxTilt = 30; // Máxima inclinación permitida
+            const tiltFactorX = Math.min(maxTilt, Math.max(-maxTilt, tiltX)) / maxTilt;
+            const tiltFactorY = Math.min(maxTilt, Math.max(-maxTilt, tiltY)) / maxTilt;
+            
+            // Aplicar transformación al agua
+            const translateX = tiltFactorY * 30;
+            const translateY = -tiltFactorX * 30;
+            const rotateX = tiltFactorX * 15;
+            const rotateY = tiltFactorY * 15;
+            
+            // Agregar efecto de ondas
+            waveOffset += 0.05 + (shakeIntensity * 0.1);
+            const waveDistortion = Math.sin(waveOffset) * (5 + shakeIntensity * 10);
+            
+            waterElement.style.transform = `
+                translate(${translateX}px, ${translateY}px)
+                rotateX(${rotateX}deg)
+                rotateY(${rotateY}deg)
+                scaleX(${1 + Math.sin(waveOffset * 0.5) * 0.05})
+            `;
+            
+            // Actualizar ondas
+            const waves = document.querySelectorAll('.wave');
+            waves.forEach((wave, i) => {
+                const offset = waveOffset * (i + 1) * 0.5;
+                const waveHeight = 5 + Math.sin(offset) * 5;
+                wave.style.height = `${waveHeight}px`;
+            });
+            
+            // Actualizar burbujas
+            updateBubbles();
+            
+            // Continuar animación
+            requestAnimationFrame(updateWater);
+        }
+        
+        // Crear burbujas
+        function createBubbles(count) {
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    const bubble = document.createElement('div');
+                    bubble.className = 'bubble';
+                    
+                    // Tamaño aleatorio
+                    const size = Math.random() * 15 + 5;
+                    bubble.style.width = `${size}px`;
+                    bubble.style.height = `${size}px`;
+                    
+                    // Posición aleatoria
+                    const posX = Math.random() * 100;
+                    bubble.style.left = `${posX}%`;
+                    bubble.style.bottom = '0';
+                    
+                    // Animación
+                    const duration = Math.random() * 8 + 4;
+                    const delay = Math.random() * 2;
+                    bubble.style.animation = `bubble-rise ${duration}s linear ${delay}s infinite`;
+                    
+                    bubblesElement.appendChild(bubble);
+                    
+                    // Guardar referencia y eliminar después de la animación
+                    setTimeout(() => {
+                        bubble.remove();
+                    }, (duration + delay) * 1000);
+                    
+                }, i * 300);
+            }
+        }
+        
+        // Actualizar posición de burbujas existentes
+        function updateBubbles() {
+            const bubbles = document.querySelectorAll('.bubble');
+            bubbles.forEach(bubble => {
+                // Mover burbujas según la inclinación
+                const currentLeft = parseFloat(bubble.style.left) || 50;
+                const newLeft = currentLeft + (tiltY * 0.1);
+                bubble.style.left = `${Math.max(0, Math.min(100, newLeft))}%`;
+            });
+        }
+        
+        // Reiniciar simulación
+        function resetSimulation() {
+            tiltX = 0;
+            tiltY = 0;
+            tiltZ = 0;
+            shakeIntensity = 0;
+            
+            document.getElementById('tilt-x').textContent = '0°';
+            document.getElementById('tilt-y').textContent = '0°';
+            document.getElementById('tilt-z').textContent = '0°';
+        }
+        
+        // Event listeners
+        document.getElementById('permission-btn').addEventListener('click', requestDeviceOrientation);
+        document.getElementById('reset-btn').addEventListener('click', resetSimulation);
+        
+        // Iniciar la aplicación
+        if (isMobileDevice()) {
+            // Para algunos dispositivos que no requieren permiso explícito
+            if (typeof DeviceOrientationEvent !== 'undefined' && 
+                typeof DeviceOrientationEvent.requestPermission !== 'function') {
+                document.getElementById('permission-panel').style.display = 'none';
+                initDeviceOrientation();
+            }
+        } else {
+            // Si no es móvil, ocultar el panel de permisos
+            document.getElementById('permission-panel').style.display = 'none';
+        }
+    </script>
 </body>
 </html>
